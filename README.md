@@ -1,17 +1,17 @@
-# PeerCode
+# Peared
 
-PeerCode is a cross-platform collaborative code editor built as a Tauri
+Peared is a cross-platform collaborative code editor built as a Tauri
 desktop app. It lets one person host an editing session, share a room URL, and
 have other peers join from their own desktop clients. Everyone edits the same
 document, and changes are synchronized through CRDT operations so concurrent
 typing can be merged without a central document server owning the file.
 
-The app window is titled **Peared** in the current Tauri configuration, but the
-repository and internal project name are PeerCode.
+Some internal package names, repository paths, and generated sidecar filenames
+may still use older `peercode` identifiers.
 
 ## What It Is For
 
-PeerCode is useful when several people need to work in the same text buffer
+Peared is useful when several people need to work in the same text buffer
 without moving the document into a hosted SaaS editor.
 
 Common use cases include:
@@ -39,7 +39,7 @@ Common use cases include:
 
 ## Repository Layout
 
-PeerCode is split into three independently buildable workspaces:
+Peared is split into three independently buildable workspaces:
 
 - `tauri-app/` - the desktop client. The frontend is React, TypeScript, Vite,
   and Monaco. The native backend is Rust/Tauri.

@@ -46,9 +46,28 @@ fi
 mkdir -p "$BINARIES_DIR"
 
 # ── Download ──────────────────────────────────────────────────────────────────
-URL="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-${CF_OS}-${CF_ARCH}${EXT}"
-echo "Downloading cloudflared for ${TRIPLE}..."
-echo "  → $URL"
-curl -fsSL "$URL" -o "$DEST"
+if [ "$CF_OS" = "darwin" ]; then
+  TMP_DIR="$(mktemp -d)"
+  trap 'rm -rf "$TMP_DIR"' EXIT
+
+  URL="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-${CF_OS}-${CF_ARCH}.tgz"
+  echo "Downloading cloudflared for ${TRIPLE}..."
+  echo "  → $URL"
+  curl -fsSL "$URL" -o "$TMP_DIR/cloudflared.tgz"
+  tar -xzf "$TMP_DIR/cloudflared.tgz" -C "$TMP_DIR"
+
+  EXTRACTED="$(find "$TMP_DIR" -type f -name cloudflared -print -quit)"
+  if [ -z "$EXTRACTED" ]; then
+    echo "cloudflared archive did not contain a cloudflared binary" >&2
+    exit 1
+  fi
+
+  cp "$EXTRACTED" "$DEST"
+else
+  URL="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-${CF_OS}-${CF_ARCH}${EXT}"
+  echo "Downloading cloudflared for ${TRIPLE}..."
+  echo "  → $URL"
+  curl -fsSL "$URL" -o "$DEST"
+fi
 chmod +x "$DEST"
 echo "Done: $("$DEST" --version)"
