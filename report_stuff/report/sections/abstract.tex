@@ -20,8 +20,8 @@
 
 პარალელური რედაქტირებისას ცვლილებების უკონფლიქტოდ შერწყმას უზრუნველყოფს
 CRDT (Conflict-free Replicated Data Type) ალგორითმი, კონკრეტულად, YATA
-ვარიანტი, რომელიც ცნობილი, კოლაბორაციული ედიტინგის ყველაზე ცნობილი ბიბლიოთეკის,
-Yjs ბიბლიოთეკის საფუძველია. თითოეული კლიენტი დოკუმენტის
+ვარიანტი, რომელიც კოლაბორაციული ედიტინგის ყველაზე ცნობილი ბიბლიოთეკის,
+Yjs-ის, საფუძველია. თითოეული კლიენტი დოკუმენტის
 საკუთარ ასლს ფლობს და ოპერაციები ისეა აგებული, რომ ნებისმიერი თანმიმდევრობით
 მიღების შემთხვევაში ყველა მონაწილე ერთსა და იმავე ტექსტს დაინახავს. სისტემა
 სამი დამოუკიდებელი კომპონენტისგან შედგება: Rust-ზე დაწერილი CRDT ბიბლიოთეკა,
@@ -30,8 +30,9 @@ Tauri Framework-ზე აგებული desktop კლიენტი (Reac
 ავტომატურად ხსნის Cloudflare Tunnel-ს, რაც პორტების გახსნისა და ქსელის
 კონფიგურაციის გარეშე აძლევს დაშორებულ მონაწილეებს შეერთების საშუალებას.
 
-შედეგად მივიღეთ მომუშავე პროდუქტი. რომლითაც რამდენიმე ადამიანს ერთდროულად შეუძლია ერთი და იგივე
-ფაილის რედაქტირება, უფლებების მართვა და ამ ყველაფერს ნელი ინტერნეტის პირობებშიც კი ეფექტურად ართმევს თავს. 
+შედეგად მივიღეთ მომუშავე პროდუქტი, რომლითაც რამდენიმე ადამიანს
+ერთდროულად შეუძლია ერთი და იმავე ფაილის რედაქტირება და უფლებების მართვა,
+და რომელიც ნელი ინტერნეტის პირობებშიც კი ეფექტურად მუშაობს.
 
 \clearpage
 \section*{Abstract}
@@ -40,40 +41,31 @@ Tauri Framework-ზე აგებული desktop კლიენტი (Reac
 Working together on the same text file is part of everyday life today -
 whether it is pair programming, a seminar, a lab session or a technical
 interview. Despite this, most existing tools rest on two assumptions: the
-document must be uploaded to some company's central server, and every
-participant must have a stable internet connection. In our experience,
-both assumptions frequently break down in a university classroom: when the
-internet cuts out, screen sharing stops, and the whole seminar ends up
-crowding around a single laptop.
+document must be uploaded to some company's central server (e.g. Google
+Docs), and every participant must have a stable internet connection. In
+our experience, both assumptions frequently break down in a university
+classroom: screen sharing often fails, and the whole seminar ends up
+crowding around the professor's laptop.
 
 To solve this problem we built Peared, a cross-platform desktop
-application for collaborative text editing that works both on a local
-network (LAN) without internet access and over the global network. The
-session initiator (the host) runs a lightweight relay server on their own
-machine, managed automatically by the application, while the other
-participants simply join via a link. The document never leaves the
-participants' computers, no central service, no accounts and no
-subscriptions are required.
+application for collaborative text editing that works both locally and
+globally. The session initiator (the host) runs a lightweight relay
+server on their own machine, managed automatically by the application,
+while the other participants simply join via a link. The document never
+leaves the participants' computers.
 
 Conflict-free merging of concurrent edits is guaranteed by a CRDT
 (Conflict-free Replicated Data Type) algorithm, specifically the YATA
-approach that underlies the Yjs library. Every client owns its own replica
-of the document, and operations are constructed so that, regardless of the
-order in which they are received, all participants converge to the same
-text. The system consists of three independent components: a CRDT library
-written in Rust, a desktop client built on Tauri (with a React/Monaco
-frontend), and a WebSocket relay server written in Go. For global access
-the application automatically opens a Cloudflare Tunnel, which lets remote
-participants connect without port forwarding or any network configuration.
+variant that underlies Yjs, the best-known collaborative editing library.
+Every client owns its own replica of the document, and operations are
+constructed so that, regardless of the order in which they are received,
+all participants will see the same text. The system consists of three
+independent components: a CRDT library written in Rust, a desktop client
+built on the Tauri framework (with a React/Monaco frontend), and a
+WebSocket relay server written in Go. For global access the application
+automatically opens a Cloudflare Tunnel, which lets remote participants
+connect without port forwarding or any network configuration.
 
-Special attention was paid to performance and memory efficiency: to speed
-up position lookups we augmented the document with a B+ tree index, which
-reduced key operations from linear to logarithmic time, and to reclaim the
-tombstones left behind by deleted text we designed a host-centric garbage
-collection scheme that takes advantage of a distinctive property of our
-architecture, the host acting as the source of truth.
-
-The result is a working product: an editor that runs on Linux, Windows and
-macOS, with which several people can edit the same file simultaneously,
-manage write permissions, open and save files, and control the full life
-cycle of a collaboration session.
+The result is a working product with which several people can edit the
+same file simultaneously and manage write permissions, and which performs
+well even under a slow internet connection.

@@ -77,11 +77,23 @@
   \renewcommand{\footrulewidth}{0pt}}
 \pagestyle{plain}
 
-% სქრინშოტის ადგილის დამჭერი (შემდეგ ჩაანაცვლეთ \includegraphics-ით)
+% სქრინშოტის ადგილის დამჭერი (შემდეგ ჩაანაცვლეთ \appscreenshot-ით)
 \newcommand{\screenshot}[1]{%
   \begin{center}
     \fbox{\parbox[c][6cm][c]{0.85\textwidth}{\centering [insert #1]}}
   \end{center}}
+
+% რეალური სქრინშოტის ჩასმა: PNG ჩააგდეთ images/ საქაღალდეში და დაწერეთ
+%   \appscreenshot{images/editor.png}{მთავარი ფანჯარა}{fig:editor}
+% arg1 = ფაილი, arg2 = წარწერა (caption), arg3 = label (ტექსტში \ref-ისთვის).
+% ნუმერაცია და „სურათები“ სიაში მოხვედრა ავტომატურია.
+\newcommand{\appscreenshot}[3]{%
+  \begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.85\textwidth]{#1}
+    \caption{#2}
+    \label{#3}
+  \end{figure}}
 
 \begin{document}
 
