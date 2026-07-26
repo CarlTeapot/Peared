@@ -1,0 +1,173 @@
+\subsection{პროექტის ტექნიკური მხარე}
+
+\subsubsection{სისტემის საერთო არქიტექტურა}
+
+Peared-ის სისტემა სამი გაშვებადი (runtime) კომპონენტისგან შედგება:
+
+\begin{enumerate}[itemsep=0pt]
+  \item \textbf{desktop აპლიკაცია} (\texttt{tauri-app}), მას ყველა
+        მონაწილე უშვებს. სწორედ აქ ცხოვრობს დოკუმენტის CRDT ასლი, Monaco
+        რედაქტორი და სესიის მართვის მთელი ლოგიკა.
+  \item \textbf{გეითვეი} (\texttt{gateway}), Go-ზე დაწერილი WebSocket
+        სარელეო სერვერი, რომელსაც \emph{მხოლოდ ჰოსტის} აპლიკაცია უშვებს
+        დამხმარე (sidecar) პროცესად სესიის დაწყებისას და კლავს სესიის
+        დასრულებისას. ის მდგომარეობას თითქმის არ ინახავს, უბრალოდ
+        გადააგზავნის ბაიტებს ოთახის წევრებს შორის.
+  \item \textbf{Cloudflared გვირაბი}, არასავალდებულო დამხმარე პროცესი,
+        რომელიც ჰოსტის გეითვეის დროებით საჯარო
+        \texttt{*.trycloudflare.com} მისამართზე აქვეყნებს, რათა ლოკალური
+        ქსელის გარეთ მყოფმა სტუმრებმაც შეძლონ შეერთება.
+\end{enumerate}
+
+ქსელური ტოპოლოგია hub-and-spoke მოდელს მიჰყვება: ყველა მონაწილე (თავად
+ჰოსტის კლიენტიც კი) ერთსა და იმავე გეითვეის უკავშირდება WebSocket-ით, ხოლო
+გეითვეი მიღებულ ყოველ ფრეიმს დანარჩენებს გადაუგზავნის. ამით ვიღებთ
+peer-to-peer სისტემის თვისებებს (დოკუმენტი მხოლოდ მონაწილეებთანაა,
+ცენტრალური სერვისი არ არსებობს) სრული mesh-ქსელის სირთულის გარეშე -
+თითოეულ კლიენტს მხოლოდ ერთი კავშირი სჭირდება.
+
+\begin{diagram}[htbp]
+  \centering
+  \resizebox{\textwidth}{!}{%
+  \begin{tikzpicture}[
+      font=\small\sffamily,
+      box/.style={draw, thick, rounded corners=3pt, align=center,
+                  minimum width=3.2cm, minimum height=1.15cm},
+      hostapp/.style={box, draw=pcblue, fill=pcblueL},
+      side/.style={box, draw=pcgreen, fill=pcgreenL},
+      tun/.style={box, draw=pcorange, fill=pcorangeL},
+      guest/.style={box, draw=pcpurple, fill=pcpurpleL},
+      cloud/.style={box, draw=pcorange, fill=pcorangeL!50, dashed},
+      arr/.style={{Stealth}-{Stealth}, very thick, draw=black!70},
+      lbl/.style={font=\footnotesize\sffamily, fill=white, inner sep=1.5pt}
+    ]
+    % host machine
+    \node[hostapp] (app) {Peared app\\(host)};
+    \node[side, right=2.6cm of app] (gw) {Gateway\\(Go relay)};
+    \node[tun, below=1.0cm of gw] (cf) {cloudflared};
+
+    % guests
+    \node[guest, right=3.4cm of gw] (g1) {Peared app\\(LAN guest)};
+    \node[cloud, below=1.9cm of g1] (edge) {Cloudflare edge\\ *.trycloudflare.com};
+    \node[guest, right=1.3cm of edge] (g2) {Peared app\\(remote guest)};
+
+    \begin{scope}[on background layer]
+      \node[draw=pcblue!60, thick, dashed, rounded corners=5pt, fill=pcblue!6,
+            inner sep=10pt, fit=(app)(gw)(cf),
+            label={[font=\small\sffamily\bfseries, text=pcblue]above:Host machine}] {};
+    \end{scope}
+
+    \draw[arr, draw=pcblue] (app) -- node[lbl]{ws://localhost} (gw);
+    \draw[arr, draw=pcpurple] (gw) -- node[lbl]{LAN WebSocket} (g1);
+    \draw[arr, draw=pcorange] (cf.east) -- node[lbl, sloped]{tunnel} (edge.west);
+    \draw[arr, draw=pcpurple] (edge) -- node[lbl]{WSS} (g2);
+    \draw[arr, dashed, draw=pcorange] (gw) -- (cf);
+  \end{tikzpicture}}
+  \caption{სისტემის საერთო არქიტექტურა: ჰოსტის კომპიუტერზე გაშვებული
+  გეითვეი და მასთან დაკავშირებული კლიენტები}
+  \label{diag:architecture}
+\end{diagram}
+
+\paragraph{სესიის სასიცოცხლო ციკლი.}
+როდესაც მომხმარებელი სესიის წამოწყებას (hosting) ირჩევს, აპლიკაცია
+თანმიმდევრულად ასრულებს შემდეგ ნაბიჯებს: (1) უშვებს გეითვეის პროცესს და
+მისგან სტანდარტულ გამოსავალზე (stdout) დაბეჭდილი JSON შეტყობინებით იგებს,
+რომელ პორტზე დაიწყო მუშაობა; (2) საუკეთესო ძალისხმევის პრინციპით უშვებს
+\texttt{cloudflared}-ს და ელოდება საჯარო ბმულს; (3) HTTP მოთხოვნით
+გეითვეისგან ქმნის „ოთახს“ (room) და იღებს მის იდენტიფიკატორს; (4) თავად
+უერთდება ოთახს WebSocket-ით და მაშინვე აგზავნის დოკუმენტის სნეფშოტს, რათა
+მოგვიანებით შემოსული სტუმრები სწრაფად „დაეწიონ“ მიმდინარე მდგომარეობას.
+ამის შემდეგ ჰოსტი ორ ბმულს იღებს, ლოკალური ქსელისა და საჯაროს, და
+ორივეს ერთი ღილაკით გააზიარებს. სტუმრის მხარეს იგივე პროცესი ბევრად
+მარტივია: ბმულის ჩასმა, WebSocket კავშირი, სნეფშოტის მიღება და მუშაობის
+დაწყება.
+
+სესიაში უფლებები ასიმეტრიულია: ჰოსტი ყოველთვის სრულუფლებიანია, ხოლო
+სტუმრები, ნაგულისხმევად, მხოლოდ კითხვის რეჟიმში ერთვებიან (ჰოსტს შეუძლია
+სესიის დაწყებისას აირჩიოს, რომ სტუმრებს ჩაწერის უფლება ავტომატურად
+მიეცეთ). სესიის მიმდინარეობისას ჰოსტი თითოეულ სტუმარს ინდივიდუალურად
+ანიჭებს ან ართმევს ჩაწერის უფლებას, ამ მექანიზმის ტექნიკურ დეტალებს
+ქვემოთ განვიხილავთ.
+
+\subsubsection{Tauri ფრეიმვორკი კონცეპტუალურად}
+
+desktop აპლიკაცია აგებულია Tauri 2 ფრეიმვორკზე \cite{tauri}. Tauri-ის
+იდეა მარტივია: აპლიკაციის ინტერფეისი იწერება ჩვეულებრივი ვებ-ტექნოლოგიებით
+(ჩვენს შემთხვევაში React + TypeScript) და ეშვება ოპერაციული სისტემის
+ჩაშენებულ webview-ში, ხოლო „ნატიური“ ლოგიკა, ფაილებთან წვდომა, ქსელი,
+პროცესების მართვა, იწერება Rust-ზე და ცალკე პროცესის ბირთვში ცხოვრობს.
+ორ სამყაროს შორის კომუნიკაცია ხდება IPC-ით: ფრონტენდი იძახებს ბექენდის
+„ბრძანებებს“ (commands), ბექენდი კი ფრონტენდს „ივენთებს“ (events) უგზავნის.
+Electron-თან შედარებით Tauri-ის ბინარები გაცილებით მცირეა (ის Chromium-ს
+არ აპაკეტებს) და ბექენდის ენად Rust გვქონდა, რაც ჩვენთვის გადამწყვეტი იყო -
+CRDT ბიბლიოთეკა სწორედ Rust-ზეა დაწერილი და აპლიკაციაში პირდაპირ,
+დანამატების გარეშე ჩაშენდა.
+
+Tauri-ის კიდევ ერთი ფუნქცია, რომელსაც აქტიურად ვიყენებთ, არის
+\emph{sidecar} ბინარები: გეითვეი და \texttt{cloudflared} აპლიკაციასთან
+ერთად იდება და აპლიკაცია მათ სასიცოცხლო ციკლს სრულად აკონტროლებს -
+მომხმარებელი ვერც კი ამჩნევს, რომ მის კომპიუტერზე ცალკე სერვერი გაეშვა.
+
+\subsubsection{ფრონტენდი და Monaco, როგორც ჩონჩხი}
+
+ინტერფეისის ბირთვად Monaco Editor \cite{monaco} ავირჩიეთ, იგივე
+რედაქტორის კომპონენტი, რომელზეც VS Code დგას. ეს არჩევანი ბევრ რამეს
+გვაძლევს „უფასოდ“: სინტაქსის გაფერადება, მრავალკურსორიანი რედაქტირება,
+undo/redo, ძებნა და კლავიატურის ნაცნობი მალსახმობები. ჩვენი ფრონტენდი
+Monaco-ს გარშემოა შემოწერილი: React მართავს აპლიკაციის „გარსს“ (გვერდითი
+პანელი, სესიის სტატუსი, მონაწილეთა სია, ფაილების მენიუ), ხოლო Monaco -
+თავად ტექსტს. ლოკალური ცვლილებები Monaco-დან ბექენდისკენ IPC ბრძანებებით
+მიდის, დაშორებული მონაწილეების ცვლილებები კი ბექენდიდან ივენთებით ბრუნდება
+და რედაქტორში ისე ჩაესმება, რომ ხელახლა არ გავრცელდეს. ამ ორმხრივი ნაკადის
+დეტალებს ფრონტენდის თავში აღვწერთ.
+
+\begin{diagram}[htbp]
+  \centering
+  \begin{tikzpicture}[
+      font=\small\sffamily,
+      layer/.style={draw, thick, rounded corners=3pt, align=center,
+                    minimum height=1.05cm, minimum width=3.9cm},
+      arr/.style={{Stealth}-{Stealth}, very thick, draw=black!70}
+    ]
+    % Frontend
+    \node[layer, draw=pcblue, fill=pcblueL, minimum width=13.0cm]
+      (fe) {\textbf{Frontend:} React + Monaco Editor (webview)};
+    \node[below=0.5cm of fe, font=\small\itshape] (ipc)
+      {IPC: commands $\downarrow$ \quad events $\uparrow$};
+
+    % Backend core row 1
+    \node[layer, draw=pcblue, fill=pcblueL, below=0.4cm of ipc, xshift=-4.55cm]
+      (appstate) {AppState\\session FSM};
+    \node[layer, draw=pcgreen, fill=pcgreenL, right=0.45cm of appstate]
+      (actor) {Document actor\\(crdt-core + tokio)};
+    \node[layer, draw=pcpurple, fill=pcpurpleL, right=0.45cm of actor]
+      (ws) {WebSocket\\management};
+
+    % Backend row 2
+    \node[layer, draw=pcblue, fill=pcblueL, below=0.55cm of appstate]
+      (perm) {Roster \&\\permissions};
+    \node[layer, draw=pcorange, fill=pcorangeL, right=0.45cm of perm]
+      (gc) {Garbage collection\\(SV exchange)};
+    \node[layer, draw=pcgreen, fill=pcgreenL, right=0.45cm of gc]
+      (pers) {Persistence\\(file open/save)};
+
+    % Backend row 3
+    \node[layer, draw=pcpurple, fill=pcpurpleL, below=0.55cm of perm]
+      (proc) {Process\\coordinator};
+    \node[layer, draw=pcorange, fill=pcorangeL, right=0.45cm of proc]
+      (metrics) {Metrics\\aggregator};
+    \node[layer, draw=pcblue, fill=pcblueL, right=0.45cm of metrics]
+      (gwapi) {Gateway API\\client (HTTP)};
+
+    \begin{scope}[on background layer]
+      \node[draw=black!50, thick, dashed, rounded corners=5pt, fill=black!3,
+            inner sep=9pt, fit=(appstate)(ws)(proc)(gwapi),
+            label={[font=\small\sffamily\bfseries]below:Tauri backend (Rust)}] {};
+    \end{scope}
+
+    \draw[arr, draw=pcblue] (fe) -- (ipc);
+    \draw[arr, draw=pcblue] (ipc) -- (actor);
+  \end{tikzpicture}
+  \caption{კლიენტის (Tauri აპლიკაციის) შრეები და ქვესისტემები}
+  \label{diag:layers}
+\end{diagram}

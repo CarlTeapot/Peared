@@ -1,0 +1,210 @@
+% ============================================================
+% Peared, საბაკალავრო პროექტის ანგარიში
+% კომპილაცია: XeLaTeX (Overleaf-ზე: Menu -> Compiler -> XeLaTeX)
+%
+% ფონტი: გაიდის მიხედვით Sylfaen. თუ სისტემაზე Sylfaen არ დგას
+% (მაგ. Overleaf-ზე), ატვირთეთ sylfaen.ttf პროექტში ან დროებით
+% ჩაანაცვლეთ ქვემოთ fallback ფონტით (Noto Serif Georgian).
+% ============================================================
+\documentclass[12pt,a4paper]{article}
+
+\usepackage{fontspec}
+\IfFontExistsTF{Sylfaen}
+  {\setmainfont{Sylfaen}}
+  {\IfFontExistsTF{Noto Serif Georgian}
+    {\setmainfont{Noto Serif Georgian}}
+    {\setmainfont{DejaVu Serif}}}
+
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{setspace}
+\onehalfspacing
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,shapes.multipart,fit,calc,backgrounds}
+\usepackage{newfloat}
+\usepackage{caption}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage[hidelinks]{hyperref}
+
+% ---------- ფერების პალიტრა დიაგრამებისთვის ----------
+\definecolor{pcblue}{HTML}{2E6FB7}
+\definecolor{pcblueL}{HTML}{DCEAF9}
+\definecolor{pcgreen}{HTML}{2F8F5B}
+\definecolor{pcgreenL}{HTML}{DFF3E7}
+\definecolor{pcorange}{HTML}{D98A1F}
+\definecolor{pcorangeL}{HTML}{FCEBD1}
+\definecolor{pcred}{HTML}{C25B5B}
+\definecolor{pcredL}{HTML}{F7DFDF}
+\definecolor{pcpurple}{HTML}{7A5FA8}
+\definecolor{pcpurpleL}{HTML}{EAE3F5}
+
+% ---------- ცენტრირებული სათაურები ----------
+\titleformat{\section}[block]{\centering\Large\bfseries}{}{0pt}{}
+\titleformat{\subsection}[block]{\centering\large\bfseries}{}{0pt}{}
+
+% ---------- ქართული სახელები სტანდარტული სათაურებისთვის ----------
+\renewcommand{\contentsname}{სარჩევი}
+\renewcommand{\figurename}{სურათი}
+\renewcommand{\tablename}{ცხრილი}
+\renewcommand{\refname}{გამოყენებული ლიტერატურა}
+\renewcommand{\listfigurename}{სურათები}
+\renewcommand{\listtablename}{ცხრილები}
+
+% ქართული სიტყვები არ იტეხება მარცვლებად, ზედმეტად გრძელი ხაზების
+% ასაცილებლად ვაძლევთ დამატებით დრეკადობას
+\emergencystretch=3em
+\sloppy
+
+% დიაგრამებს ცალკე მთვლელი აქვთ (მაგალითი-რეპორტების სტილში:
+% "დიაგრამა 1", "სურათი 1" ცალ-ცალკე ინომრება)
+\DeclareFloatingEnvironment[fileext=lod,listname={დიაგრამები},name={დიაგრამა},placement=htbp]{diagram}
+\captionsetup[diagram]{labelsep=period}
+\captionsetup[figure]{labelsep=period}
+\captionsetup[table]{labelsep=period}
+
+% სექციები უნომროდ, მაგრამ სარჩევში ჩანს (მაგალითი-რეპორტების სტილი)
+\setcounter{secnumdepth}{-1}
+\setcounter{tocdepth}{2}
+
+% გვერდის ნომერი ქვედა მარჯვენა კუთხეში
+\fancypagestyle{plain}{%
+  \fancyhf{}%
+  \fancyfoot[R]{\thepage}%
+  \renewcommand{\headrulewidth}{0pt}%
+  \renewcommand{\footrulewidth}{0pt}}
+\pagestyle{plain}
+
+% სქრინშოტის ადგილის დამჭერი (შემდეგ ჩაანაცვლეთ \includegraphics-ით)
+\newcommand{\screenshot}[1]{%
+  \begin{center}
+    \fbox{\parbox[c][6cm][c]{0.85\textwidth}{\centering [insert #1]}}
+  \end{center}}
+
+\begin{document}
+
+% ============================================================
+% სატიტულო გვერდი (უნომრო)
+% ============================================================
+\begin{titlepage}
+  \begin{center}
+    \vspace*{1cm}
+    {\large თბილისის თავისუფალი უნივერსიტეტი}\\[0.4cm]
+    {\large მათემატიკის, კომპიუტერული მეცნიერების და ინჟინერიის სკოლა (MACS[E])}\\[0.4cm]
+    {\large კომპიუტერული მეცნიერებისა და მათემატიკის პროგრამა}\\[2.5cm]
+
+    {\large არევაძე მათე}\\[0.2cm]
+    {\large ჭიჭინაძე ქეთი}\\[0.2cm]
+    {\large გელაშვილი გიორგი}\\[2.5cm]
+
+    {\Large\bfseries საბაკალავრო პროექტი}\\[0.8cm]
+    {\LARGE\bfseries „Peared“}\\[2.5cm]
+
+    {\large ხელმძღვანელი: აბსანძე ლუკა}
+
+    \vfill
+    {\large თბილისი}\\[0.2cm]
+    {\large 2026}
+  \end{center}
+\end{titlepage}
+
+% ============================================================
+% წინა ნაწილი, რომაული ნუმერაცია ii-დან
+% ============================================================
+\pagenumbering{roman}
+\setcounter{page}{2}
+
+\input{sections/abstract}
+
+\clearpage
+\tableofcontents
+
+\clearpage
+\section*{ცხრილების, დიაგრამების, ფორმულების და სურათების ჩამონათვალი}
+\addcontentsline{toc}{section}{ცხრილების, დიაგრამების, ფორმულების და სურათების ჩამონათვალი}
+\listofdiagrams
+\listoffigures
+\listoftables
+
+% ============================================================
+% ძირითადი ტექსტი, არაბული ნუმერაცია 1-დან
+% ============================================================
+\clearpage
+\pagenumbering{arabic}
+\setcounter{page}{1}
+
+\input{sections/intro}
+
+\clearpage
+\section{ძირითადი ნაწილი}
+
+\input{sections/domain}
+\input{sections/architecture}
+\input{sections/crdt_core}
+\input{sections/tauri_app}
+\input{sections/frontend}
+\input{sections/gateway}
+\input{sections/optimizations}
+\input{sections/results}
+
+\clearpage
+\input{sections/conclusion}
+
+% ============================================================
+% ლიტერატურა (IEEE სტილი, ხელით)
+% ============================================================
+\clearpage
+\addcontentsline{toc}{section}{გამოყენებული ლიტერატურა}
+\begin{thebibliography}{9}
+
+\bibitem{yata}
+P.~Nicolaescu, K.~Jahns, M.~Derntl, and R.~Klamma,
+``Near Real-Time Peer-to-Peer Shared Editing on Extensible Data Types,''
+in \emph{Proceedings of the 19th International Conference on Supporting Group Work (GROUP~'16)},
+Sanibel Island, FL, USA, 2016, pp. 39--49.
+
+\bibitem{crdt}
+M.~Shapiro, N.~Preguiça, C.~Baquero, and M.~Zawirski,
+``Conflict-free Replicated Data Types,''
+in \emph{Proceedings of the 13th International Symposium on Stabilization, Safety, and Security of Distributed Systems (SSS~'11)},
+Grenoble, France, 2011, pp. 386--400.
+
+\bibitem{ot}
+C.~A. Ellis and S.~J. Gibbs,
+``Concurrency control in groupware systems,''
+in \emph{Proceedings of the 1989 ACM SIGMOD International Conference on Management of Data},
+Portland, OR, USA, 1989, pp. 399--407.
+
+\bibitem{yjs}
+K.~Jahns, ``Yjs Documentation.'' [Online]. Available: \url{https://docs.yjs.dev/}
+
+\bibitem{diamond}
+J.~Gentle, ``diamond-types: The world's fastest CRDT.'' [Online]. Available: \url{https://github.com/josephg/diamond-types}
+
+\bibitem{tauri}
+Tauri Working Group, ``Tauri 2.0 Documentation.'' [Online]. Available: \url{https://v2.tauri.app/}
+
+\bibitem{monaco}
+Microsoft, ``Monaco Editor.'' [Online]. Available: \url{https://microsoft.github.io/monaco-editor/}
+
+\bibitem{cloudflared}
+Cloudflare, Inc., ``Cloudflare Tunnel Documentation.'' [Online]. Available: \url{https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/}
+
+\bibitem{claude}
+Anthropic, ``Claude.'' [Online]. Available: \url{https://claude.com/}
+(გამოყენებულია ფრონტენდის ვიზუალური დიზაინის იტერაციებში დამხმარე ინსტრუმენტად)
+
+\end{thebibliography}
+
+% ============================================================
+% დანართები
+% ============================================================
+\clearpage
+\section{დანართები}
+\begin{itemize}
+  \item პროექტის GitHub ბმული: \url{https://github.com/CarlTeapot/Peared}
+\end{itemize}
+
+\end{document}
