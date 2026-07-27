@@ -352,3 +352,33 @@ fn decode_peer_info_rejects_invalid_utf8_username() {
         Err(WireError::MalformedPeerInfo)
     ));
 }
+
+#[test]
+fn presence_round_trips() {
+    let frame = PresenceFrame {
+        client_id: ClientId::new(u64::MAX - 3),
+        sel_start: 42,
+        sel_end: 4096,
+    };
+    let encoded = encode_presence(&frame);
+    assert_eq!(encoded.len(), 17);
+    assert_eq!(decode_presence(&encoded).unwrap(), frame);
+}
+
+#[test]
+fn decode_presence_rejects_wrong_prefix() {
+    let frame = vec![OP_PREFIX; 17];
+    assert!(matches!(
+        decode_presence(&frame),
+        Err(WireError::NotAPresence)
+    ));
+}
+
+#[test]
+fn decode_presence_rejects_truncated_frame() {
+    let frame = vec![PREFIX_PRESENCE, 0, 0, 0];
+    assert!(matches!(
+        decode_presence(&frame),
+        Err(WireError::MalformedPresence)
+    ));
+}
