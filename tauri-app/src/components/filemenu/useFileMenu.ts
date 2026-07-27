@@ -141,7 +141,7 @@ export function useFileMenu(
   );
 
   const openFrom = useCallback(async () => {
-    let selected: string | string[] | null = null;
+    let selected: string | string[] | null;
     try {
       selected = await openFileDialog({
         title: "Open file…",
