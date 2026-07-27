@@ -1,4 +1,12 @@
-import { useState, useRef, useCallback, useMemo, useEffect } from "react";
+import {
+  useState,
+  useRef,
+  useCallback,
+  useMemo,
+  useEffect,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
 import type { editor } from "monaco-editor";
 import Editor, { type OnMount, type Monaco } from "@monaco-editor/react";
 import { invoke } from "@tauri-apps/api/core";
@@ -31,6 +39,9 @@ const SESSION_NOTICE_MESSAGE: Record<SessionNotice, string> = {
   ended: "The host ended the session. Your document is preserved.",
   disconnected: "Connection lost. Your document is preserved locally.",
 };
+
+const MAX_EVENT_LOG_ENTRIES = 500;
+const FULL_REVERT_CHECK_MAX_LENGTH = 20_000;
 
 interface LogEntry {
   id: number;
@@ -97,6 +108,20 @@ function AppContent({ username, onUsernameChange }: AppContentProps) {
   const opChainRef = useRef<Promise<unknown>>(Promise.resolve());
   const [dirty, setDirty] = useState(false);
   const markDirty = useCallback(() => setDirty(true), []);
+  const setBoundedEventLog = useCallback<Dispatch<SetStateAction<LogEntry[]>>>(
+    (action) => {
+      setEventLog((prev) => {
+        const next =
+          typeof action === "function"
+            ? (action as (prevState: LogEntry[]) => LogEntry[])(prev)
+            : action;
+        return next.length > MAX_EVENT_LOG_ENTRIES
+          ? next.slice(-MAX_EVENT_LOG_ENTRIES)
+          : next;
+      });
+    },
+    [],
+  );
 
   const session = useSessionEvents();
   const { roomState, clearRoomState } = useRoomState();
@@ -180,7 +205,7 @@ function AppContent({ username, onUsernameChange }: AppContentProps) {
     (text: string, name: string) => {
       replaceEditorText(text);
       const count = ++eventCountRef.current;
-      setEventLog((prev) => [
+      setBoundedEventLog((prev) => [
         ...prev,
         {
           id: count,
@@ -190,7 +215,7 @@ function AppContent({ username, onUsernameChange }: AppContentProps) {
         },
       ]);
     },
-    [replaceEditorText],
+    [replaceEditorText, setBoundedEventLog],
   );
 
   const onSaved = useCallback(() => setDirty(false), []);
@@ -217,7 +242,7 @@ function AppContent({ username, onUsernameChange }: AppContentProps) {
     monacoRef,
     isApplyingRemote,
     eventCountRef,
-    setEventLog,
+    setEventLog: setBoundedEventLog,
     lastAppliedSeqRef,
     shadowTextRef,
     onDocChanged: markDirty,
@@ -228,7 +253,7 @@ function AppContent({ username, onUsernameChange }: AppContentProps) {
     monacoRef,
     isApplyingRemote,
     eventCountRef,
-    setEventLog,
+    setEventLog: setBoundedEventLog,
     shadowTextRef,
   });
 
@@ -299,11 +324,15 @@ function AppContent({ username, onUsernameChange }: AppContentProps) {
             forceMoveMarkers: false,
           })),
         );
-        // DEV compares full text; release keeps an O(1) length invariant so a
-        // wrong revert never silently diverges the model from the shadow.
-        const revertDiverged = import.meta.env.DEV
-          ? model.getValue() !== shadowTextRef.current
-          : model.getValueLength() !== shadowTextRef.current.length;
+        const shadowLength = shadowTextRef.current.length;
+        // Keep the keystroke hot path O(1) for large documents. The full DEV
+        // check is useful while editing small docs, but getValue() allocates
+        // the entire model and becomes visible input lag as the session grows.
+        const revertDiverged =
+          model.getValueLength() !== shadowLength ||
+          (import.meta.env.DEV &&
+            shadowLength <= FULL_REVERT_CHECK_MAX_LENGTH &&
+            model.getValue() !== shadowTextRef.current);
         if (revertDiverged) {
           console.warn(
             "surgical revert diverged from shadow text; falling back to full revert",
@@ -341,7 +370,7 @@ function AppContent({ username, onUsernameChange }: AppContentProps) {
               }
             } catch (error) {
               const count = ++eventCountRef.current;
-              setEventLog((prev) => [
+              setBoundedEventLog((prev) => [
                 ...prev,
                 {
                   id: count,
@@ -479,7 +508,11 @@ function AppContent({ username, onUsernameChange }: AppContentProps) {
           onClick={() => setLogOpen((prev) => !prev)}
           title={logOpen ? "Collapse event log" : "Expand event log"}
         >
-          {logOpen ? "▾" : "▸"} change event log ({eventLog.length})
+          {logOpen ? "▾" : "▸"} change event log ({eventCountRef.current}
+          {eventLog.length < eventCountRef.current
+            ? `, latest ${eventLog.length}`
+            : ""}
+          )
         </button>
         {logOpen && (
           <div className="event-log" ref={logRef}>
