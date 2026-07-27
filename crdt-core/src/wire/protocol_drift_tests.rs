@@ -1,8 +1,9 @@
 use super::{
     CONTROL_SESSION_ENDED, CONTROL_SNAPSHOT_REQUEST, MembershipEvent, MembershipFrame, OP_PREFIX,
     PEER_FLAG_CAN_WRITE, PEER_FLAG_HOST, PEER_JOINED, PEER_LEFT, PREFIX_CONTROL, PREFIX_GC_COMMIT,
-    PREFIX_MEMBERSHIP, PREFIX_PEER_INFO, PREFIX_PERMISSION, PREFIX_SV_REPORT, PeerInfoFrame,
-    PermissionFrame, SNAPSHOT_PREFIX, encode_membership, encode_peer_info, encode_permission,
+    PREFIX_MEMBERSHIP, PREFIX_PEER_INFO, PREFIX_PERMISSION, PREFIX_PRESENCE, PREFIX_SV_REPORT,
+    PeerInfoFrame, PermissionFrame, PresenceFrame, SNAPSHOT_PREFIX, encode_membership,
+    encode_peer_info, encode_permission, encode_presence,
 };
 use crate::types::ClientId;
 
@@ -20,6 +21,7 @@ fn prefix_constants_match_go_mirror() {
     const GO_PREFIX_SV_REPORT: u8 = 0x06;
     const GO_PREFIX_PERMISSION: u8 = 0x07;
     const GO_PREFIX_PEER_INFO: u8 = 0x08;
+    const GO_PREFIX_PRESENCE: u8 = 0x09;
     const GO_MEMBERSHIP_JOINED: u8 = 0x01;
     const GO_MEMBERSHIP_LEFT: u8 = 0x02;
     const GO_PEER_FLAG_HOST: u8 = 0x01;
@@ -74,6 +76,10 @@ fn prefix_constants_match_go_mirror() {
         "PREFIX_PEER_INFO drifted from gateway/internal/wire::PrefixPeerInfo"
     );
     assert_eq!(
+        PREFIX_PRESENCE, GO_PREFIX_PRESENCE,
+        "PREFIX_PRESENCE drifted from gateway/internal/wire::PrefixPresence"
+    );
+    assert_eq!(
         PEER_FLAG_HOST, GO_PEER_FLAG_HOST,
         "PEER_FLAG_HOST drifted from gateway/internal/wire::PeerFlagHost"
     );
@@ -105,6 +111,39 @@ fn presence_layout_matches_go_mirror() {
         encode_membership(&frame),
         expected,
         "Membership frame layout drifted from gateway/internal/wire::EncodeMembershipFrame"
+    );
+}
+
+#[test]
+fn presence_frame_layout_matches_go_mirror() {
+    let frame = PresenceFrame {
+        client_id: ClientId::new(0x0102_0304_0506_0708),
+        sel_start: 0x0A0B_0C0D,
+        sel_end: 0x0E0F_1011,
+    };
+    let expected = vec![
+        PREFIX_PRESENCE,
+        0x01,
+        0x02,
+        0x03,
+        0x04,
+        0x05,
+        0x06,
+        0x07,
+        0x08,
+        0x0A,
+        0x0B,
+        0x0C,
+        0x0D,
+        0x0E,
+        0x0F,
+        0x10,
+        0x11,
+    ];
+    assert_eq!(
+        encode_presence(&frame),
+        expected,
+        "Presence frame layout drifted from the documented [0x09][client u64][start u32][end u32] layout"
     );
 }
 

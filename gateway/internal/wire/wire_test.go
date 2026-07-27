@@ -98,6 +98,14 @@ func TestValidateFrame_AcceptsPermission(t *testing.T) {
 	}
 }
 
+func TestValidateFrame_AcceptsPresence(t *testing.T) {
+	frame := make([]byte, 17)
+	frame[0] = PrefixPresence
+	if err := ValidateFrame(frame); err != nil {
+		t.Fatalf("ValidateFrame(presence) = %v, want nil", err)
+	}
+}
+
 func TestValidateFrame_RejectsInboundPeerInfo(t *testing.T) {
 	frame, err := EncodePeerInfoFrame(1, false, true, "alice")
 	if err != nil {

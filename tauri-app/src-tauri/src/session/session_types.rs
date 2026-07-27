@@ -5,10 +5,19 @@ pub const SESSION_DISCONNECTED: &str = "session://disconnected";
 pub const PROCESSES_STOPPED: &str = "session://processes-stopped";
 pub const ROOM_STATE_CHANGED: &str = "session://room-state";
 pub const CAN_WRITE_CHANGED: &str = "session://can-write";
+pub const PEER_CURSOR: &str = "session://peer-cursor";
 
 #[derive(Clone, serde::Serialize)]
 pub struct CanWritePayload {
     pub can_write: bool,
+}
+
+/// A peer's cursor/selection.
+#[derive(Clone, serde::Serialize)]
+pub struct PeerCursorPayload {
+    pub client_id: String,
+    pub sel_start: u32,
+    pub sel_end: u32,
 }
 
 #[derive(Clone, serde::Serialize)]
