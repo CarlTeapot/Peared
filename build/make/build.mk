@@ -3,7 +3,7 @@
 FRONTEND_BUILD_OUT := tauri-app/dist/index.html
 FRONTEND_BUILD_INPUTS := $(shell git ls-files tauri-app/src) tauri-app/index.html tauri-app/vite.config.ts tauri-app/package.json tauri-app/package-lock.json tauri-app/.env.production
 
-RUST_RELEASE_BIN := tauri-app/src-tauri/target/release/tauri-app
+RUST_RELEASE_BIN := tauri-app/src-tauri/target/release/Peared
 RUST_RELEASE_INPUTS := $(shell git ls-files tauri-app/src-tauri/src crdt-core/src) tauri-app/src-tauri/Cargo.toml tauri-app/src-tauri/Cargo.lock crdt-core/Cargo.toml
 
 TARGET_TRIPLE := $(shell rustc -vV | sed -n 's|host: ||p')
@@ -44,7 +44,7 @@ $(RUST_RELEASE_BIN): $(RUST_RELEASE_INPUTS)
 prod-build: $(CLOUDFLARED_BIN) $(GATEWAY_BIN) $(FRONTEND_BUILD_OUT) $(RUST_RELEASE_BIN)
 
 prod-run: $(RUST_RELEASE_BIN)
-	cd tauri-app/src-tauri && ./target/release/tauri-app
+	cd tauri-app/src-tauri && ./target/release/Peared
 
 prod: prod-build prod-run
 
