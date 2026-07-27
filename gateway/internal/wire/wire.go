@@ -15,7 +15,6 @@ const (
 	PrefixSvReport   byte = 0x06
 	PrefixPermission byte = 0x07
 	PrefixPeerInfo   byte = 0x08
-	PrefixPresence   byte = 0x09
 )
 
 const (
@@ -60,7 +59,7 @@ func ValidateFrame(frame []byte) error {
 		return ErrEmptyFrame
 	}
 	switch frame[0] {
-	case PrefixOp, PrefixSnapshot, PrefixGcCommit, PrefixSvReport, PrefixPermission, PrefixPresence:
+	case PrefixOp, PrefixSnapshot, PrefixGcCommit, PrefixSvReport, PrefixPermission:
 		return nil
 	default:
 		return fmt.Errorf("%w: 0x%02X", ErrUnknownPrefix, frame[0])

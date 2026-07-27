@@ -112,7 +112,6 @@ pub fn run() {
             session::joint_commands::get_session_info,
             session::joint_commands::leave_session,
             session::permission_commands::set_peer_permission,
-            session::presence_commands::send_cursor,
             processes::commands::get_process_status,
             app_config::commands::get_identity,
             app_config::commands::set_username,
