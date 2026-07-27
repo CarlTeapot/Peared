@@ -4,7 +4,6 @@ import Editor, { type OnMount, type Monaco } from "@monaco-editor/react";
 import { invoke } from "@tauri-apps/api/core";
 import { useRemoteChangeListener } from "./remoteChangeListener";
 import { useSnapshotListener } from "./snapshotListener";
-import { usePeerCursors, createCursorSender } from "./peerCursors";
 import { createEnqueueOp, createIpcSenders } from "./opQueue";
 import { normalizeToLF, forceModelLF } from "./eol";
 import { computeInverseEdits, type ModelChange } from "./lib/inverseEdits";
@@ -103,33 +102,10 @@ function AppContent({ username, onUsernameChange }: AppContentProps) {
   const [peersOpen, setPeersOpen] = useState(false);
   const isHost = session.sessionStatus === "host";
   const inSession = isHost || session.sessionStatus === "guest";
-  const inSessionRef = useRef(false);
 
   useEffect(() => {
     if (!inSession) setPeersOpen(false);
-    inSessionRef.current = inSession;
   }, [inSession]);
-
-  usePeerCursors({ editorRef, monacoRef, roomState });
-  const sendCursor = useMemo(
-    () => createCursorSender(() => inSessionRef.current),
-    [],
-  );
-
-  // Announce our cursor whenever the roster changes: covers "we just joined"
-  // (peers see us without waiting for a move) and "someone joined" (they get
-  // everyone's current cursor, which the gateway never replays).
-  useEffect(() => {
-    if (!inSession || !roomState) return;
-    const ed = editorRef.current;
-    const model = ed?.getModel();
-    const sel = ed?.getSelection();
-    if (!model || !sel) return;
-    sendCursor(
-      model.getOffsetAt(sel.getStartPosition()),
-      model.getOffsetAt(sel.getEndPosition()),
-    );
-  }, [inSession, roomState, sendCursor]);
 
   const [activeSection, setActiveSection] = useState<PanelSection | null>(null);
   const lastSectionRef = useRef<PanelSection>("collab");
@@ -251,14 +227,6 @@ function AppContent({ username, onUsernameChange }: AppContentProps) {
     installPlainTextPasteHandler(editorInstance);
     editorInstance.onDidChangeCursorPosition((e) => {
       setCursor({ line: e.position.lineNumber, col: e.position.column });
-    });
-    editorInstance.onDidChangeCursorSelection((e) => {
-      const model = editorInstance.getModel();
-      if (!model) return;
-      sendCursor(
-        model.getOffsetAt(e.selection.getStartPosition()),
-        model.getOffsetAt(e.selection.getEndPosition()),
-      );
     });
     setStatusReady(true);
     shadowTextRef.current = editorInstance.getModel()?.getValue() ?? "";

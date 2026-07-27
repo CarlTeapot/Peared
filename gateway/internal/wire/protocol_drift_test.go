@@ -19,7 +19,6 @@ func TestPrefixConstantsMatchRustSource(t *testing.T) {
 		rustPrefixSvReport   byte = 0x06
 		rustPrefixPermission byte = 0x07
 		rustPrefixPeerInfo   byte = 0x08
-		rustPrefixPresence   byte = 0x09
 		rustMembershipJoined byte = 0x01
 		rustMembershipLeft   byte = 0x02
 		rustPeerFlagHost     byte = 0x01
@@ -61,9 +60,6 @@ func TestPrefixConstantsMatchRustSource(t *testing.T) {
 	}
 	if PrefixPeerInfo != rustPrefixPeerInfo {
 		t.Fatalf("PrefixPeerInfo = %#x, rust PREFIX_PEER_INFO = %#x — protocol drift", PrefixPeerInfo, rustPrefixPeerInfo)
-	}
-	if PrefixPresence != rustPrefixPresence {
-		t.Fatalf("PrefixPresence = %#x, rust PREFIX_PRESENCE = %#x — protocol drift", PrefixPresence, rustPrefixPresence)
 	}
 	if PeerFlagHost != rustPeerFlagHost {
 		t.Fatalf("PeerFlagHost = %#x, rust PEER_FLAG_HOST = %#x — protocol drift", PeerFlagHost, rustPeerFlagHost)

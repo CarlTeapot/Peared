@@ -17,7 +17,6 @@ pub const PREFIX_MEMBERSHIP: u8 = 0x05;
 pub const PREFIX_SV_REPORT: u8 = 0x06;
 pub const PREFIX_PERMISSION: u8 = 0x07;
 pub const PREFIX_PEER_INFO: u8 = 0x08;
-pub const PREFIX_PRESENCE: u8 = 0x09;
 
 pub const PEER_JOINED: u8 = 0x01;
 pub const PEER_LEFT: u8 = 0x02;
@@ -83,14 +82,6 @@ pub struct PeerInfoFrame {
     pub username: String,
 }
 
-/// A peer's cursor/selection, carried by a `0x09` frame.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct PresenceFrame {
-    pub client_id: ClientId,
-    pub sel_start: u32,
-    pub sel_end: u32,
-}
-
 #[derive(Debug)]
 pub enum WireError {
     EmptyFrame,
@@ -105,8 +96,6 @@ pub enum WireError {
     MalformedPermission,
     NotAPeerInfo,
     MalformedPeerInfo,
-    NotAPresence,
-    MalformedPresence,
     Decode(bitcode::Error),
     SnapshotDecode(SnapshotError),
 }
@@ -147,12 +136,6 @@ impl fmt::Display for WireError {
             }
             WireError::MalformedPeerInfo => {
                 write!(f, "peer-info frame has an invalid layout")
-            }
-            WireError::NotAPresence => {
-                write!(f, "wire frame is not a presence frame")
-            }
-            WireError::MalformedPresence => {
-                write!(f, "presence frame has an invalid layout")
             }
             WireError::Decode(e) => write!(f, "bitcode decode failed: {e}"),
             WireError::SnapshotDecode(e) => write!(f, "snapshot decode failed: {e}"),
@@ -358,36 +341,6 @@ pub fn decode_peer_info(frame: &[u8]) -> Result<PeerInfoFrame, WireError> {
         is_host: flags & PEER_FLAG_HOST != 0,
         can_write: flags & PEER_FLAG_CAN_WRITE != 0,
         username,
-    })
-}
-
-pub fn encode_presence(frame: &PresenceFrame) -> Vec<u8> {
-    let mut out = Vec::with_capacity(17);
-    out.push(PREFIX_PRESENCE);
-    out.extend_from_slice(&frame.client_id.value.to_be_bytes());
-    out.extend_from_slice(&frame.sel_start.to_be_bytes());
-    out.extend_from_slice(&frame.sel_end.to_be_bytes());
-    out
-}
-
-pub fn decode_presence(frame: &[u8]) -> Result<PresenceFrame, WireError> {
-    let (&prefix, payload) = frame.split_first().ok_or(WireError::EmptyFrame)?;
-    if prefix != PREFIX_PRESENCE {
-        return Err(WireError::NotAPresence);
-    }
-    if payload.len() != 16 {
-        return Err(WireError::MalformedPresence);
-    }
-    let mut client_bytes = [0u8; 8];
-    client_bytes.copy_from_slice(&payload[0..8]);
-    let mut start_bytes = [0u8; 4];
-    start_bytes.copy_from_slice(&payload[8..12]);
-    let mut end_bytes = [0u8; 4];
-    end_bytes.copy_from_slice(&payload[12..16]);
-    Ok(PresenceFrame {
-        client_id: ClientId::new(u64::from_be_bytes(client_bytes)),
-        sel_start: u32::from_be_bytes(start_bytes),
-        sel_end: u32::from_be_bytes(end_bytes),
     })
 }
 

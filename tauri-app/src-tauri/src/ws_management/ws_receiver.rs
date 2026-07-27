@@ -1,9 +1,9 @@
 use crdt_core::encode_snapshot;
 use crdt_core::store::StateVector;
 use crdt_core::wire::{
-    decode_membership, decode_peer_info, decode_permission, decode_presence, decode_sv_report,
-    MembershipEvent, CONTROL_SESSION_ENDED, CONTROL_SNAPSHOT_REQUEST, PREFIX_CONTROL,
-    PREFIX_MEMBERSHIP, PREFIX_PEER_INFO, PREFIX_PERMISSION, PREFIX_PRESENCE, PREFIX_SV_REPORT,
+    decode_membership, decode_peer_info, decode_permission, decode_sv_report, MembershipEvent,
+    CONTROL_SESSION_ENDED, CONTROL_SNAPSHOT_REQUEST, PREFIX_CONTROL, PREFIX_MEMBERSHIP,
+    PREFIX_PEER_INFO, PREFIX_PERMISSION, PREFIX_SV_REPORT,
 };
 use futures_util::StreamExt;
 use log::{debug, error, info, warn};
@@ -52,7 +52,6 @@ pub async fn receive_loop(
                 Some(PREFIX_SV_REPORT) => route_sv_report(&app, &bytes).await,
                 Some(PREFIX_PERMISSION) => route_permission(&app, &bytes).await,
                 Some(PREFIX_PEER_INFO) => route_peer_info(&app, &bytes).await,
-                Some(PREFIX_PRESENCE) => route_presence(&app, &bytes),
                 _ => {
                     debug!("ws receiver binary message (bytes={})", bytes.len());
                     if op_tx.send(bytes.into()).is_err() {
@@ -169,27 +168,6 @@ async fn route_peer_info(app: &AppHandle, bytes: &[u8]) {
     match decode_peer_info(bytes) {
         Ok(frame) => roster::apply_peer_info(app, frame).await,
         Err(e) => warn!("ws recv: peer-info decode failed: {e}"),
-    }
-}
-
-/// A peer's cursor/selection arrived: hand it straight to the webview. Purely
-/// ephemeral presence — no backend state is kept, the frontend owns rendering.
-fn route_presence(app: &AppHandle, bytes: &[u8]) {
-    use crate::session::session_types::{PeerCursorPayload, PEER_CURSOR};
-    use tauri::Emitter;
-
-    match decode_presence(bytes) {
-        Ok(frame) => {
-            let _ = app.emit(
-                PEER_CURSOR,
-                PeerCursorPayload {
-                    client_id: frame.client_id.value.to_string(),
-                    sel_start: frame.sel_start,
-                    sel_end: frame.sel_end,
-                },
-            );
-        }
-        Err(e) => warn!("ws recv: presence decode failed: {e}"),
     }
 }
 
