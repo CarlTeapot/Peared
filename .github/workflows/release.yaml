@@ -21,21 +21,19 @@ jobs:
             target: x86_64-unknown-linux-gnu
             gateway_ext: ""
             args: ""
-          - name: macOS
-            os: macos-15-intel
-            target: x86_64-apple-darwin
-            gateway_ext: ""
-            args: ""
+            macos_signing_identity: ""
           - name: macOS ARM
             os: macos-15
             target: aarch64-apple-darwin
             gateway_ext: ""
             args: "--target aarch64-apple-darwin"
+            macos_signing_identity: "-"
           - name: Windows
             os: windows-latest
             target: x86_64-pc-windows-msvc
             gateway_ext: ".exe"
             args: ""
+            macos_signing_identity: ""
 
     steps:
       - uses: actions/checkout@v4
@@ -90,31 +88,30 @@ jobs:
             "${{ matrix.target }}" \
             "tauri-app/src-tauri/binaries/peercode-gateway-${{ matrix.target }}${{ matrix.gateway_ext }}"
 
-      - name: Install cloudflared sidecar (macOS)
+      - name: Install cloudflared sidecar
+        shell: bash
+        run: bash build/scripts/install-cloudflared.sh
+
+      - name: Verify macOS sidecar architectures
         if: runner.os == 'macOS'
         shell: bash
         run: |
-          brew install cloudflared
-          mkdir -p tauri-app/src-tauri/binaries
-          cp "$(command -v cloudflared)" "tauri-app/src-tauri/binaries/cloudflared-${{ matrix.target }}"
-          chmod +x "tauri-app/src-tauri/binaries/cloudflared-${{ matrix.target }}"
-          "tauri-app/src-tauri/binaries/cloudflared-${{ matrix.target }}" --version
-
-      - name: Install cloudflared sidecar (Linux/Windows)
-        if: runner.os != 'macOS'
-        shell: bash
-        run: bash build/scripts/install-cloudflared.sh
+          file "tauri-app/src-tauri/binaries/peercode-gateway-${{ matrix.target }}"
+          file "tauri-app/src-tauri/binaries/cloudflared-${{ matrix.target }}"
+          file "tauri-app/src-tauri/binaries/peercode-gateway-${{ matrix.target }}" | grep -q "arm64"
+          file "tauri-app/src-tauri/binaries/cloudflared-${{ matrix.target }}" | grep -q "arm64"
 
       - name: Publish Tauri bundles
         uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          APPLE_SIGNING_IDENTITY: ${{ matrix.macos_signing_identity }}
         with:
           projectPath: tauri-app
           tagName: ${{ github.ref_name }}
           releaseName: PeerCode ${{ github.ref_name }}
           releaseBody: |
-            Release builds for Linux, macOS Intel, macOS ARM, and Windows.
+            Release builds for Linux, macOS ARM, and Windows.
 
             The gateway sidecar is bundled inside each desktop app by Tauri's externalBin configuration.
           releaseDraft: false
